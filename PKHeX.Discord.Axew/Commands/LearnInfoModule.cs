@@ -6,7 +6,7 @@ using Discord;
 using Discord.Commands;
 using PKHeX.Core;
 
-namespace PKHeX.Discord.Axew
+namespace PKHeX.Discord.Axew.Commands
 {
     public class LearnInfoModule : ModuleBase<SocketCommandContext>
     {
@@ -76,7 +76,7 @@ namespace PKHeX.Discord.Axew
             bool capped = false;
             foreach (var line in summary)
             {
-                if (line.StartsWith("="))
+                if (line.StartsWith('='))
                 {
                     any = true;
                     if (sb.Length > 0)

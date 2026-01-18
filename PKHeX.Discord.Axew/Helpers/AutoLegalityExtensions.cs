@@ -1,9 +1,11 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 using PKHeX.Core;
 using PKHeX.Core.AutoMod;
+using static PKHeX.Core.AutoMod.APILegality;
 
 namespace PKHeX.Discord.Axew
 {
@@ -11,28 +13,28 @@ namespace PKHeX.Discord.Axew
     {
         static AutoLegalityExtensions()
         {
-            Task.Run(() => {
-                var lang = Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName[..2];
-                LocalizationUtil.SetLocalization(typeof(LegalityCheckStrings), lang);
-                LocalizationUtil.SetLocalization(typeof(MessageStrings), lang);
-                RibbonStrings.ResetDictionary(GameInfo.Strings.ribbons);
+            EncounterEvent.RefreshMGDB();
+            Legalizer.EnableEasterEggs = false;
+            APILegality.SetAllLegalRibbons = false;
+            APILegality.Timeout = 99999;
+            APILegality.GameVersionPriority = GameVersionPriorityType.NewestFirst;
+            ParseSettings.Settings.Handler.CheckActiveHandler = false;
+            ParseSettings.Settings.HOMETransfer.HOMETransferTrackerNotPresent = Severity.Fishy;
+            ParseSettings.Settings.Nickname.SetAllTo(new NicknameRestriction
+            {
+                NicknamedTrade = Severity.Fishy,
+                NicknamedMysteryGift = Severity.Fishy,
             });
 
-            // Seed the Trainer Database with enough fake save files so that we return a generation sensitive format when needed.
             foreach (var game in GameUtil.GameVersions)
             {
                 const string OT = "PKHeX-D";
-                var blankSAV = SaveUtil.GetBlankSAV(game, OT);
+                var blankSAV = BlankSaveFile.Get(game, OT);
                 TrainerSettings.Register(blankSAV);
             }
 
-            var trainer = TrainerSettings.GetSavedTrainerData(7);
+            var trainer = TrainerSettings.GetSavedTrainerData(GameVersion.SV);
             RecentTrainerCache.SetRecentTrainer(trainer);
-
-            // Legalizer.AllowBruteForce = false;
-
-            // Update Legality Analysis strings
-            ParseSettings.ChangeLocalizationStrings(GameInfo.Strings.movelist, GameInfo.Strings.specieslist);
         }
 
         public static async Task ReplyWithLegalizedSetAsync(this ISocketMessageChannel channel, ITrainerInfo sav, ShowdownSet set)
@@ -42,12 +44,36 @@ namespace PKHeX.Discord.Axew
                 await channel.SendMessageAsync("Oops! I wasn't able to interpret your message! If you intended to convert something, please double check what you're pasting!").ConfigureAwait(false);
                 return;
             }
-            var pkm = sav.GetLegalFromSet(set, out var result);
+
+            APILegality.AsyncLegalizationResult almres;
+            try
+            {
+                almres = sav.GetLegalFromSet(set);
+            }
+            catch (MissingMethodException)
+            {
+                await channel.SendMessageAsync("Version mismatch between PKHeX.Core and Auto-Legality Mod. Please update both.").ConfigureAwait(false);
+                return;
+            }
+
+            var pkm = almres.Created;
             var la = new LegalityAnalysis(pkm);
             var spec = GameInfo.Strings.Species[set.Species];
-            var msg = la.Valid
-                ? $"Here's your ({result}) legalized PKM for {spec} ({la.EncounterOriginal.Name})!"
-                : $"Oops! I wasn't able to create something from that. Here's my best attempt for that {spec}!";
+
+            string msg;
+            if (almres.Status == LegalizationResult.VersionMismatch)
+            {
+                msg = "Version mismatch between PKHeX.Core and Auto-Legality Mod. Please update both.";
+            }
+            else if (la.Valid)
+            {
+                msg = $"Here's your ({almres.Status}) legalized PKM for {spec} ({la.EncounterOriginal.Name})!";
+            }
+            else
+            {
+                msg = $"Oops! I wasn't able to create something from that. Here's my best attempt for that {spec}!";
+            }
+
             await channel.SendPKMAsync(pkm, msg + $"\n{ReusableActions.GetFormattedShowdownText(pkm)}").ConfigureAwait(false);
         }
 
@@ -55,7 +81,8 @@ namespace PKHeX.Discord.Axew
         {
             content = ReusableActions.StripCodeBlock(content);
             var set = new ShowdownSet(content);
-            var sav = TrainerSettings.GetSavedTrainerData(gen);
+            var game = RegenUtil.GetGameVersionFromGen((byte)gen);
+            var sav = TrainerSettings.GetSavedTrainerData(game);
             await channel.ReplyWithLegalizedSetAsync(sav, set).ConfigureAwait(false);
         }
 
@@ -63,7 +90,7 @@ namespace PKHeX.Discord.Axew
         {
             content = ReusableActions.StripCodeBlock(content);
             var set = new ShowdownSet(content);
-            var sav = TrainerSettings.GetSavedTrainerData(PKX.Generation);
+            var sav = TrainerSettings.GetSavedTrainerData(GameVersion.SV);
             await channel.ReplyWithLegalizedSetAsync(sav, set).ConfigureAwait(false);
         }
 

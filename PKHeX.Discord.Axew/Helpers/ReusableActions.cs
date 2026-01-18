@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
@@ -12,7 +12,7 @@ namespace PKHeX.Discord.Axew
     {
         public static async Task SendPKMAsync(this ISocketMessageChannel channel, PKM pkm, string msg = "")
         {
-            var tmp = Path.Combine(Path.GetTempPath(), Util.CleanFileName(pkm.FileName));
+            var tmp = Path.Combine(Path.GetTempPath(), CleanFileName(pkm.FileName));
             File.WriteAllBytes(tmp, pkm.DecryptedPartyData);
             await channel.SendFileAsync(tmp, msg).ConfigureAwait(false);
             File.Delete(tmp);
@@ -50,5 +50,12 @@ namespace PKHeX.Discord.Axew
         }
 
         public static string StripCodeBlock(string str) => str.Replace("`\n", "").Replace("\n`", "").Replace("`", "").Trim();
+
+        private static string CleanFileName(string fileName)
+        {
+            foreach (var c in Path.GetInvalidFileNameChars())
+                fileName = fileName.Replace(c, '_');
+            return fileName;
+        }
     }
 }

@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 
-namespace PKHeX.Discord.Axew
+namespace PKHeX.Discord.Axew.Commands
 {
     public class HelpModule : ModuleBase<SocketCommandContext>
     {
         private readonly CommandService _service;
 
-        public HelpModule(CommandService service)
+    public HelpModule(CommandService service)
         {
             _service = service;
         }
@@ -29,7 +29,7 @@ namespace PKHeX.Discord.Axew
             foreach (var module in _service.Modules)
             {
                 string description = "";
-                HashSet<string> mentioned = new();
+                HashSet<string> mentioned = [];
                 foreach (var cmd in module.Commands)
                 {
                     var name = cmd.Name;

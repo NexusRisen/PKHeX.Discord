@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Discord.Commands;
 
-namespace PKHeX.Discord.Axew
+namespace PKHeX.Discord.Axew.Commands
 {
     public class PingModule : ModuleBase<SocketCommandContext>
     {

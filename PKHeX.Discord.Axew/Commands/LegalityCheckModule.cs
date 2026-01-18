@@ -3,7 +3,7 @@ using Discord;
 using Discord.Commands;
 using PKHeX.Core;
 
-namespace PKHeX.Discord.Axew
+namespace PKHeX.Discord.Axew.Commands
 {
     public class LegalityCheckModule : ModuleBase<SocketCommandContext>
     {

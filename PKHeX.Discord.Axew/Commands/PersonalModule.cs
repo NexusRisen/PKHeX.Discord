@@ -31,18 +31,19 @@ namespace PKHeX.Discord.Axew
             await PrintDataAsync(spec, form).ConfigureAwait(false);
         }
 
-        private static void GetSpeciesForm(IReadOnlyList<string> split, out ushort spec, out byte form)
+        private static void GetSpeciesForm(string[] split, out ushort spec, out byte form)
         {
             var strings = GameInfo.Strings;
             spec = (ushort)StringUtil.FindIndexIgnoreCase(strings.specieslist, split[0]);
 
             form = 0;
-            if (split.Count <= 1)
+            if (split.Length <= 1)
                 return;
             var formstr = split[1];
             if (byte.TryParse(formstr, out form))
                 return;
-            var forms = FormConverter.GetFormList(spec, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, PKX.Context);
+            var context = EntityContext.Gen9;
+            var forms = FormConverter.GetFormList(spec, strings.types, strings.forms, GameInfo.GenderSymbolUnicode, context);
             form = (byte)StringUtil.FindIndexIgnoreCase(forms, formstr);
         }
 
@@ -56,7 +57,8 @@ namespace PKHeX.Discord.Axew
                 await ReplyAsync("Bad species argument!").ConfigureAwait(false);
                 return;
             }
-            var forms = FormConverter.GetFormList(spec, strings.Types, strings.forms, GameInfo.GenderSymbolASCII, PKX.Context);
+            var context = EntityContext.Gen9;
+            var forms = FormConverter.GetFormList(spec, strings.types, strings.forms, GameInfo.GenderSymbolUnicode, context);
             if (form >= forms.Length)
             {
                 await ReplyAsync("Bad form argument!").ConfigureAwait(false);
@@ -90,7 +92,7 @@ namespace PKHeX.Discord.Axew
             return $"{Format.Bold(split[0])}:{split[1]}";
         }
 
-        private static IEnumerable<string> GetPersonalInfoSummary(IPersonalInfo pi, GameStrings strings)
+        private static List<string> GetPersonalInfoSummary(IPersonalInfo pi, GameStrings strings)
         {
             var types = strings.types;
             var abilities = strings.abilitylist;
@@ -114,9 +116,9 @@ namespace PKHeX.Discord.Axew
                 ? "Type: {0} / {1}"
                 : "Type: {0}", types[pi.Type1], types[pi.Type2]));
 
-            var ExpGroups = Enum.GetNames(typeof(EXPGroup));
-            var Colors = Enum.GetNames(typeof(PokeColor));
-            var EggGroups = Enum.GetNames(typeof(EggGroup));
+            var ExpGroups = Enum.GetNames<EXPGroup>();
+            var Colors = Enum.GetNames<PokeColor>();
+            var EggGroups = Enum.GetNames<EggGroup>();
             lines.Add($"EXP Group: {ExpGroups[pi.EXPGrowth]}");
             lines.Add(string.Format(pi.EggGroup1 != pi.EggGroup2
                 ? "Egg Group: {0} / {1}"

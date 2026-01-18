@@ -1,8 +1,9 @@
 ﻿using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using PKHeX.Discord.Axew.Helpers;
 
-namespace PKHeX.Discord.Axew
+namespace PKHeX.Discord.Axew.Commands
 {
     public class QRModule : ModuleBase<SocketCommandContext>
     {
